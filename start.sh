@@ -3,8 +3,6 @@
 # Change running directory to the script directory:
 cd "$(dirname "$0")"
 
-cd my_robot_controller
-
 colcon build --symlink-install;
 source install/setup.bash;
 ros2 run my_robot_controller farm_manager &
