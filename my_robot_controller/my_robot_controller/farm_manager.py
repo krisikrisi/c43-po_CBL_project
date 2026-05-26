@@ -25,8 +25,30 @@ class FarmManager(Node):
 
         self.digital_farm_path = self.data_dir / "digital_farm.json"
         self.operation_log_path = self.data_dir / "operation_log.json"
-
+        self.check()
         self.get_logger().info("Farm manager node started")
+
+    def check(self):
+        if not self.digital_farm_path.exists():
+            self.get_logger().error("Something is wrong with finding a file")
+            digital_farm = {
+                "cells": {
+                    str(i): {
+                        "moisture": 50
+                    }
+                    for i in range(9)
+                }
+            }
+
+            self.write_json(self.digital_farm_path, digital_farm)
+
+        if not self.operation_log_path.exists():
+            self.get_logger().error("Something is wrong with finding a file")
+            operation_log = {
+                "logs": []
+            }
+
+            self.write_json(self.operation_log_path, operation_log)
 
     def read_json(self, path):
         with open(path, 'r', encoding='utf-8') as file:
