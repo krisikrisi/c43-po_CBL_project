@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'move_to_cell = my_robot_controller.move_to_cell:main', # create command "move to cell". 1) packet, 2) file, 3) function main
+            'farm_manager = my_robot_controller.farm_manager:main',
         ],
     },
 )

@@ -3,6 +3,8 @@
 import math
 import time
 
+from std_msgs.msg import Int32 # for creating a topic
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import TwistStamped # type of message for /cmd_vel
@@ -14,6 +16,9 @@ class MoveToCell(Node):
         super().__init__('move_to_cell')
 
         self.publisher = self.create_publisher(TwistStamped, '/cmd_vel', 10) # publisher to send movement commands
+
+        # new publisher! for managing farm
+        self.done_publisher = self.create_publisher(Int32, '/watering_done', 10)
 
         self.subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)  # listen to /odom - position of robot. ros will call odom_callback when new messages come
 
@@ -98,12 +103,19 @@ class MoveToCell(Node):
         return math.atan2(math.sin(angle), math.cos(angle))
 
 
+    def publish_watering_done(self, cell_number): # new function, we publish the message about reaching the cell
+        msg = Int32()
+        msg.data = cell_number
+        self.done_publisher.publish(msg)
+        self.get_logger().info(f"Published watering done for cell {cell_number}")
+
+
     def go_to_cell(self, cell_number): # main function
         if cell_number < 0 or cell_number > 8:
             self.get_logger().error(f"Wrong cell number: {cell_number}")
             return False
 
-        self.wait_for_odom()        # get odom
+        self.wait_for_odom()        # get odom coords
         self.set_origin_if_needed()          
 
         target_x, target_y = self.get_target_position(cell_number)  # coords of cell
@@ -125,19 +137,21 @@ class MoveToCell(Node):
             if distance < 0.07:
                 self.stop()
                 self.get_logger().info(f"Reached cell {cell_number}")
+                self.publish_watering_done(cell_number) # added!
                 self.is_moving = False
                 return True
 
             target_angle = math.atan2(dy, dx)
-            angle_diff = self.normalize_angle(target_angle - self.current_yaw)
+            angle_diff = self.normalize_angle(target_angle - self.current_yaw) 
 
-            if abs(angle_diff) < 0.05: # if looking almost at destination, move
-                linear_x = min(0.08, distance)
-                angular_z = 0.0
-            else: # else rotate
+            if abs(angle_diff) > 0.45: # if the angle is far from needed, stop and rotate
                 linear_x = 0.0
-                angular_z = 0.25 * angle_diff
-                angular_z = max(min(angular_z, 0.30), -0.30) # max speed of turn
+                angular_z = 0.30 * angle_diff
+                angular_z = max(min(angular_z, 0.25), -0.25)
+            else: #else move and turn simultaneously
+                linear_x = min(0.08, distance)
+                angular_z = 0.45 * angle_diff
+                angular_z = max(min(angular_z, 0.20), -0.20)
 
             msg = self.make_twist(linear_x, angular_z)
             self.publisher.publish(msg) # send message to /cmd_vel
@@ -158,15 +172,14 @@ class MoveToCell(Node):
 
 def print_menu():
     print("\n" + "=" * 50)
-    print("TurtleBot3 Burger - Move to Cell")
+    print("Choose the cell to move to (0-8)")
     print("=" * 50)
     print("0    1    2")
     print("3    4    5")
     print("6    7    8")
     print("=" * 50)
-    print("Cell 4 = robot start position")
+    print("Cell 4 = robot start (center) position")
     print("Distance between cells = 0.5 m")
-    print("Enter cell number 0-8")
     print("Enter -1 to exit")
     print("=" * 50)
 
@@ -176,7 +189,7 @@ def main(args=None):
 
     node = MoveToCell() # creating node
 
-    node.wait_for_odom() # waiting for pos and saving start position
+    node.wait_for_odom() # waiting for position and saving start position
     node.set_origin_if_needed()
 
     print_menu()
@@ -200,7 +213,11 @@ def main(args=None):
 
         except KeyboardInterrupt:
             print("\nExiting...")
+            node.stop() # repeationg code meh
+            node.destroy_node()
+            rclpy.shutdown()
             break
+            #continue
 
     node.stop()
     node.destroy_node()

@@ -1,0 +1,40 @@
+{
+    "cells": {
+        "0": {
+            "moisture": 55,
+            "plant": "corn"
+        },
+        "1": {
+            "moisture": 50,
+            "plant": "corn"
+        },
+        "2": {
+            "moisture": 55,
+            "plant": "rice"
+        },
+        "3": {
+            "moisture": 50,
+            "plant": "pumpkin??"
+        },
+        "4": {
+            "moisture": 60,
+            "plant": "ancient seed from stardew valley"
+        },
+        "5": {
+            "moisture": 50,
+            "plant": "something"
+        },
+        "6": {
+            "moisture": 50,
+            "plant": "rice"
+        },
+        "7": {
+            "moisture": 50,
+            "plant": "rice"
+        },
+        "8": {
+            "moisture": 60,
+            "plant": "riceee"
+        }
+    }
+}

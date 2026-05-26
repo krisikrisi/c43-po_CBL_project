@@ -1,0 +1,29 @@
+{
+    "logs": [
+        {
+            "time": "2026-05-26T07:34:58",
+            "cell": 4,
+            "action": "watered"
+        },
+        {
+            "time": "2026-05-26T07:35:38",
+            "cell": 4,
+            "action": "watered"
+        },
+        {
+            "time": "2026-05-26T07:36:27",
+            "cell": 2,
+            "action": "watered"
+        },
+        {
+            "time": "2026-05-26T07:37:59",
+            "cell": 8,
+            "action": "watered"
+        },
+        {
+            "time": "2026-05-26T07:39:51",
+            "cell": 8,
+            "action": "watered"
+        }
+    ]
+}
