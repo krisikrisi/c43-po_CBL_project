@@ -3,11 +3,11 @@
 A DTAS, which simulates the environment of a farm, (finish the description) 
 
 ##  Features
--it works occasionally 
+- it works occasionally 
 
 ## How to run:
 1. Open GAZEBO and the Docker (like they explain on canvas)
-2. Run start.sh
+2. Run start.sh (inside the docker container)
 3. Good luck
 
 ## How to add features
