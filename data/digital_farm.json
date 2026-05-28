@@ -3,7 +3,7 @@
     "cells": {
         "0": {
             "moisture": 55,
-            "plant": "corn"
+            "plant": "corn",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -12,7 +12,7 @@
         },
         "1": {
             "moisture": 50,
-            "plant": "corn"
+            "plant": "corn",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -20,7 +20,7 @@
         },
         "2": {
             "moisture": 55,
-            "plant": "rice"
+            "plant": "rice",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -28,7 +28,7 @@
         },
         "3": {
             "moisture": 50,
-            "plant": "wheat"
+            "plant": "wheat",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -36,7 +36,7 @@
         },
         "4": {
             "moisture": 60,
-            "plant": "tomato"
+            "plant": "tomato",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -44,7 +44,7 @@
         },
         "5": {
             "moisture": 50,
-            "plant": "carrot"
+            "plant": "carrot",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -52,7 +52,7 @@
         },
         "6": {
             "moisture": 50,
-            "plant": "tomato"
+            "plant": "tomato",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -60,7 +60,7 @@
         },
         "7": {
             "moisture": 50,
-            "plant": "rice"
+            "plant": "rice",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
@@ -68,7 +68,7 @@
         },
         "8": {
             "moisture": 60,
-            "plant": "ancient seed"
+            "plant": "ancient seed",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
