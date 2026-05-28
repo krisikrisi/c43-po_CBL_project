@@ -19,12 +19,14 @@
       "duration_minutes": 4,
       "water_amount_liters": 1.2,
       "reason": "Moisture levels will drop below the minimum."
-    }
+    },
     {
       "cell_id": "3",
       "plant_name": "ancient seed",
       "action_type": "skip_irrigation",
       "start_time": "9:19",
+      "duration_minutes": 0,
+      "water_amount_liters": 0,
       "reason": "Rain expected."
     }
   ]
