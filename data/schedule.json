@@ -4,17 +4,28 @@
   "actions": [
     {
       "cell_id": "1",
-      "plant_name": tomato,
+      "plant_name": "tomato",
+      "action_type": "irrigation",
       "start_time": "09:00",
       "duration_minutes": 8,
       "water_amount_liters": 2.5,
+      "reason":"Moisture levels currently lower than minimum."
     },
     {
       "cell_id": "2",
-      "plant_name": wheat, 
+      "plant_name": "wheat", 
+      "action_type": "irrigation",
       "start_time": "09:15",
       "duration_minutes": 4,
       "water_amount_liters": 1.2,
+      "reason": "Moisture levels will drop below the minimum."
+    }
+    {
+      "cell_id": "3",
+      "plant_name": "ancient seed",
+      "action_type": "skip_irrigation",
+      "start_time": "9:19",
+      "reason": "Rain expected."
     }
   ]
 }
