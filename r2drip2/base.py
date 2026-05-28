@@ -7,6 +7,7 @@ from pathlib import Path # File path
 import time
 import json
 import os
+import traceback
 
 import rclpy
 from rclpy.node import Node
@@ -75,8 +76,10 @@ class Base(Node):
             rclpy.spin(self)
         except KeyboardInterrupt:
             pass
-        except:
-            self.error("Something went wrong while keeping the node alive (during call to process)")
+        except Exception as e:
+            self.error("Something went wrong while keeping the node alive (during call to process) '" + str(e) + '". See the following stacktrace: ')
+            self.error(traceback.format_exc())
+            
 
     def sleep(self, seconds):
         """
@@ -281,7 +284,7 @@ class Vec2:
         float
             The angle this vector has compared to the x axis
         """
-        return math.atan2(self.x, self.y)
+        return math.atan2(self.y, self.x)
 
     def __add__(self, other):
         """

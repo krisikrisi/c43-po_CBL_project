@@ -89,12 +89,12 @@ class FarmManager(Base):
         plot = Plot(msg.data)
 
         if not plot.valid():
-            self.error(f"Invalid cell number: {cell_number}")
+            self.error(f"Invalid cell number: {plot.get_key()}")
             return
 
-        on_plot_watered(plot)
+        self.on_plot_watered(plot)
 
-    def on_plot_watered(plot):
+    def on_plot_watered(self, plot):
         """
         Updates the farm state when a plot is watered
 
@@ -103,14 +103,16 @@ class FarmManager(Base):
         plot : Plot
             The plot that was watered
         """
-        self.farm_state["cells"][plot.get_key()]["moisture"] += 5
+        old_moisture = self.farm_state["cells"][str(plot.get_key())]["moisture"]
+        new_moisture = old_moisture + 5
+        self.farm_state["cells"][str(plot.get_key())]["moisture"] += 5
         log_entry = {
             "time": datetime.now().isoformat(timespec='seconds'),
-            "cell": cell_number,
+            "cell": plot.get_key(),
             "action": "watered"
         }
-        operation_log["logs"].append(log_entry)
-        self.info(f"Cell {cell_number} moisture: {old_moisture}% -> {new_moisture}%")
+        self.operation_logs["logs"].append(log_entry)
+        self.info(f"Cell {plot.get_key()} moisture: {old_moisture}% -> {new_moisture}%")
 
 
 def main(args=None):

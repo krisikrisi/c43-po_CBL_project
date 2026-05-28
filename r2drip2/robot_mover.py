@@ -138,8 +138,10 @@ class RobotMover(Base):
         plot : Plot
             The plot that was watered
         """
-        self.done_publisher.publish(plot.get_key())
-        self.info(f"Published watering done for cell {cell_number}")
+        msg = Int32()
+        msg.data = plot.get_key()
+        self.done_publisher.publish(msg)
+        self.info(f"Published watering done for cell {plot.get_key()}")
 
 
     def go_to_cell(self, cell_number): # main function
@@ -164,7 +166,7 @@ class RobotMover(Base):
             distance = delta.length()
 
             if distance < 0.07:
-                self.stop()
+                self.publish_vel(0.0, 0.0)
                 self.info(f"Reached cell {plot.get_key()}")
                 self.publish_watering_done(plot)
                 return
@@ -189,11 +191,11 @@ class RobotMover(Base):
             )
 
             # Sleep, to prevent spamming the robot with an extreme amount of velocity commands
-            self.sleep(0.1)
-
+            self.sleep(1)
         self.stop()
 
     def stop(self):
+        self.info("Shutting the node down")
         self.publish_vel(0.0, 0.0)
         super().destroy()
 
