@@ -47,6 +47,30 @@
   	"watering_frequency_days": 1,
   	"days_until_harvest": 90,
   	"notes": "Needs more water during warm weather and during strong growth stages."
-     }
+    }
+    {
+    "name": "Rice",
+    "growing_seasons": ["spring", "summer"],
+    "water_need_mm_per_day": 8,
+    "ideal_soil_moisture_percent": {
+    "min": 70,
+    "max": 95
+      },
+    "watering_frequency_days": 1,
+    "days_until_harvest": 110,
+    "notes": "Needs very wet soil and frequent watering. Best suited for warm and humid conditions."
+    },
+    {
+    "name": "Ancient Seed",
+    "growing_seasons": ["spring", "summer", "autumn"],
+    "water_need_mm_per_day": 4,
+    "ideal_soil_moisture_percent": {
+    "min": 40,
+    "max": 70
+      },
+    "watering_frequency_days": 1,
+    "days_until_harvest": 28,
+    "notes": "Rare mysterious crop inspired by Stardew Valley. Included as a reference.:D"
+    }
   ]
 }
