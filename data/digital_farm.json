@@ -1,40 +1,78 @@
 {
+    "last_updated": "2026-05-27T14:00:00",
     "cells": {
         "0": {
             "moisture": 55,
-            "plant": "corn"
+            "plant": "corn",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
+
         },
         "1": {
             "moisture": 50,
-            "plant": "corn"
+            "plant": "corn",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "2": {
             "moisture": 55,
-            "plant": "rice"
+            "plant": "rice",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "3": {
             "moisture": 50,
-            "plant": "pumpkin??"
+            "plant": "wheat",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "4": {
             "moisture": 60,
-            "plant": "ancient seed from stardew valley"
+            "plant": "tomato",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "5": {
             "moisture": 50,
-            "plant": "something"
+            "plant": "carrot",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "6": {
             "moisture": 50,
-            "plant": "rice"
+            "plant": "tomato",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "7": {
             "moisture": 50,
-            "plant": "rice"
+            "plant": "rice",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         },
         "8": {
             "moisture": 60,
-            "plant": "riceee"
+            "plant": "ancient seed",
+            "growth_stage": "growing",
+            "planted_date": "2026-05-01",
+            "estimated_harvest_date": "2026-07-10",
+            "status": "needs_monitoring"
         }
     }
 }

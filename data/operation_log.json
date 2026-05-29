@@ -3,27 +3,37 @@
         {
             "time": "2026-05-26T07:34:58",
             "cell": 4,
-            "action": "watered"
+            "action": "watereing_completed",
+            "water_amount_liters": 2.5,
+            "message": "Watering started for cell 1."
         },
         {
-            "time": "2026-05-26T07:35:38",
-            "cell": 4,
-            "action": "watered"
+            "time": "2026-05-26T07:45:38",
+            "cell": 5,
+            "action": "watering_completed",
+            "water_amount_liters": 2.5,
+            "message": "Watering has been completed."
         },
         {
             "time": "2026-05-26T07:36:27",
             "cell": 2,
-            "action": "watered"
+            "action": "watering_completed",
+            "water_amount_liters": 2.5,
+            "message":"Watering started for cell 2."
         },
         {
             "time": "2026-05-26T07:37:59",
-            "cell": 8,
-            "action": "watered"
+            "cell": 7,
+            "action": "watereing_completed",
+            "water_amount_liters": 2.5,
+            "message":"Watering started for cell 8."
         },
         {
-            "time": "2026-05-26T07:39:51",
+            "time": "2026-05-26T07:42:51",
             "cell": 8,
-            "action": "watered"
+            "action": "watering_completed",
+            "water_amount_liters": 1.5,
+            "message": "Watering has been completed."
         }
     ]
 }

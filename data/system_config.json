@@ -1,0 +1,5 @@
+{
+  "minimum_moisture_alert_percent": 30,
+  "skip_watering_if_rain_mm_above": 3,
+  "default_watering_time": "09:00"
+}

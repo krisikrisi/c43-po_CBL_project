@@ -1,0 +1,76 @@
+{
+  "plants": [
+    {
+      "name": "Tomato",
+      "growing_seasons": ["spring", "summer"],
+      "water_need_mm_per_day": 5,
+      "ideal_soil_moisture_percent": {
+        "min": 45,
+        "max": 70
+      },
+      "watering_frequency_days": 1, 
+      "days_until_harvest": 70,
+      "notes": "Needs regular watering, especially in warm weather."
+    },
+    {
+      "name": "Carrot",
+      "growing_seasons": ["spring", "autumn"],
+      "water_need_mm_per_day": 3,
+      "ideal_soil_moisture_percent": {
+        "min": 35,
+        "max": 60
+      	},
+      "watering_frequency_days": 2,
+      "days_until_harvest": 80,
+      "notes": "Avoid overwatering because roots may rot."
+    },
+    {
+   	"name": "Wheat",
+  	"growing_seasons": ["autumn", "winter", "spring"],
+  	"water_need_mm_per_day": 4,
+  	"ideal_soil_moisture_percent": {
+    	"min": 35,
+    	"max": 60
+     	},
+  	"watering_frequency_days": 2,
+  	"days_until_harvest": 120,
+  	"notes": "Needs moderate watering. Avoid overwatering, especially close to harvest."
+     },
+     {
+  	"name": "Corn",
+  	"growing_seasons": ["spring", "summer"],
+  	"water_need_mm_per_day": 6,
+  	"ideal_soil_moisture_percent": {
+    	"min": 45,
+    	"max": 7
+        },
+  	"watering_frequency_days": 1,
+  	"days_until_harvest": 90,
+  	"notes": "Needs more water during warm weather and during strong growth stages."
+    }
+    {
+    "name": "Rice",
+    "growing_seasons": ["spring", "summer"],
+    "water_need_mm_per_day": 8,
+    "ideal_soil_moisture_percent": {
+    "min": 70,
+    "max": 95
+      },
+    "watering_frequency_days": 1,
+    "days_until_harvest": 110,
+    "notes": "Needs very wet soil and frequent watering. Best suited for warm and humid conditions."
+    },
+    {
+    "name": "Ancient Seed",
+    "growing_seasons": ["spring", "summer", "autumn"],
+    "water_need_mm_per_day": 4,
+    "ideal_soil_moisture_percent": {
+    "min": 40,
+    "max": 70
+      },
+    "watering_frequency_days": 1,
+    "days_until_harvest": 28,
+    "notes": "Rare mysterious crop inspired by Stardew Valley. Included as a reference.:D"
+    }
+  ]
+}
