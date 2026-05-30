@@ -49,12 +49,18 @@ class FarmManager(Base):
         if not self.data_file_exists(DIGITAL_FARM_PATH):
             self.error("Could not find the digital farm file ('/data/" + DIGITAL_FARM_PATH + "')")
             self.farm_state = {
-                "cells": {
-                    str(i): {
-                        "moisture": 50
-                    }
-                    for i in range(9)
-                }
+               "last_updated": datetime.now().isoformat(timespec="seconds"),
+               "cells": {
+                       str(i): {
+                         "moisture": 50,
+                         "plant": "wheat",
+                         "growth_stage": "growing",
+                         "planted_date": "2026-05-01",
+                         "estimated_harvest_date": "2026-09-01",
+                         "status": "needs_monitoring"   
+                       }
+                       for i in range(9)
+               }
             }
         else:
             self.farm_state = self.read_json(DIGITAL_FARM_PATH)
