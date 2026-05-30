@@ -1,5 +1,12 @@
 #! /usr/bin/env bash
 
+cleanup() {
+  echo "Cleaning up..."
+  pkill -P $$ # Kill all the processes that have the current process as a parent
+}
+# If someone Ctrl+C's or the process stops, make sure to run the cleanup function:
+trap cleanup SIGINT SIGTERM EXIT
+
 echo "Starting the robot controller"
 
 # Change running directory to the script directory:
