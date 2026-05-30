@@ -6,7 +6,7 @@ completely random every tick.
 """
 
 from r2drip2.base import Base
-from std_srvs.srv import Trigger # type of service: request: empty | response:    bool success, string message (out weather state)
+from std_srvs.srv import Trigger # type of service:   request: empty | response:  bool success, string message (our weather state)
 
 import random
 import time
@@ -54,8 +54,8 @@ class MockWeather(Base):
         self.update()
         response.sucess = True
         response.message = json.dumps(self.state)
-        
-        return msg   
+
+        return response
 
 
 def main(args=None):

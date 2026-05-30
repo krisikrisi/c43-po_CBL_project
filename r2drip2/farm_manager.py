@@ -41,17 +41,18 @@ class FarmManager(Base):
 
         self.load_files()
 
-        # weather service client
+        # start weather_service_client
         self.service_client = self.create_client(Trigger, srv_name='/get_weather')
         
         while not self.service_client.wait_for_service(timeout_sec=1.0):
-            self.info("service /get_weather not available, waiting...")
+            self.info("Service /get_weather not available, waiting...")
 
         self.weather_future = None
 
         self.timer = self.create_timer(
             timer_period_sec=40,
             callback=self.farm_timer_callback)
+        # end weather_service_client
 
         
         self.info("Farm manager node started")
@@ -110,7 +111,7 @@ class FarmManager(Base):
         self.on_plot_watered(plot)
 
     def farm_timer_callback(self): # this should be finalized (right now just checking whether the service is working)
-         """
+        """
         Called every 40 seconds.
         Sends request to the weather service
         """
