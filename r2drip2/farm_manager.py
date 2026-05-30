@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime
 
 from std_msgs.msg import Int32
+from std_srvs.srv import Trigger 
 
 # Constants:
 DIGITAL_FARM_PATH = "digital_farm.json"
@@ -39,6 +40,20 @@ class FarmManager(Base):
         )
 
         self.load_files()
+
+        # weather service client
+        self.service_client = self.create_client(Trigger, srv_name='/get_weather')
+        
+        while not self.service_client.wait_for_service(timeout_sec=1.0):
+            self.info("service /get_weather not available, waiting...")
+
+        self.weather_future = None
+
+        self.timer = self.create_timer(
+            timer_period_sec=40,
+            callback=self.farm_timer_callback)
+
+        
         self.info("Farm manager node started")
 
     def load_files(self):
@@ -93,6 +108,44 @@ class FarmManager(Base):
             return
 
         self.on_plot_watered(plot)
+
+    def farm_timer_callback(self): # this should be finalized (right now just checking whether the service is working)
+         """
+        Called every 40 seconds.
+        Sends request to the weather service
+        """
+        
+        if self.weather_future is not None and not self.weather_future.done():
+            self.info("Weather request is pending")
+            return
+        
+        request = Trigger.Request() # 1 create request
+        self.weather_future = self.service_client.call_async(request) # 2 send it with call_async
+        self.weather_future.add_done_callback(self.weather_response_callback) # 3 wait until response comes
+
+        def weather_response_callback(self, future):
+            """
+            Called when weather service responds
+            """
+
+            try:
+                response = future.result() #4 take response.messaege
+
+                if not response.sucess:
+                    self.error("Wether service returned failure")
+                    self.weather_future = None
+                    return
+
+                weather_state = json.loads(response.message) # 5 get the message service returned
+                self.info(f"New weather state is: {weather_state}")
+
+                #HERE add code for updating farm cells based on weather_state
+
+            except Exception as e:
+                self.error(f"Failed to get weather state {e}")
+            
+            self.weather_future = None
+
 
     def on_plot_watered(self, plot):
         """
