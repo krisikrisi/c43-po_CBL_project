@@ -27,6 +27,7 @@ setup(
             'move_to_cell = r2drip2.robot_mover:main', # create command "move to cell". 1) packet, 2) file, 3) function main
             'farm_manager = r2drip2.farm_manager:main',
             'test = r2drip2.base:main',
+            'decision_system = r2drip2.decision_system:main',
         ],
     },
 )
