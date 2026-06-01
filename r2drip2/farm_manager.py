@@ -116,7 +116,13 @@ class FarmManager(Base):
             "time": datetime.now().isoformat(timespec='seconds'),
             "cell": plot.get_key(),
             "action": "watered"
-        }
+log_entry = {
+  "time": datetime.now().isoformat(timespec='seconds'),
+  "cell": plot.get_key(),
+  "action": "watering_completed",
+  "water_amount_litered": 5,
+  "message": "Some kind of message"
+}
         self.operation_logs["logs"].append(log_entry)
         self.info(f"Cell {plot.get_key()} moisture: {old_moisture}% -> {new_moisture}%")
 
