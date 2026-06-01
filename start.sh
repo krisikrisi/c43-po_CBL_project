@@ -1,8 +1,10 @@
 #! /usr/bin/env bash
 
 cleanup() {
-  echo "Cleaning up..."
-  pkill -P $$ # Kill all the processes that have the current process as a parent
+  echo "Cleaning up start.sh ..."
+  # There should be a cleaner approach, but the previous one didn't work
+  pkill farm_manager
+  pkill move_to_cell
 }
 # If someone Ctrl+C's or the process stops, make sure to run the cleanup function:
 trap cleanup SIGINT SIGTERM EXIT
