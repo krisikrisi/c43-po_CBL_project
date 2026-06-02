@@ -124,28 +124,28 @@ class FarmManager(Base):
         self.weather_future = self.service_client.call_async(request) # 2 send it with call_async
         self.weather_future.add_done_callback(self.weather_response_callback) # 3 wait until response comes
 
-        def weather_response_callback(self, future):
-            """
-            Called when weather service responds
-            """
+    def weather_response_callback(self, future):
+        """
+        Called when weather service responds
+        """
 
-            try:
-                response = future.result() #4 take response.messaege
+        try:
+            response = future.result() #4 take response.messaege
 
-                if not response.sucess:
-                    self.error("Wether service returned failure")
-                    self.weather_future = None
-                    return
+            if not response.success:
+                self.error("Wether service returned failure")
+                self.weather_future = None
+                return
 
-                weather_state = json.loads(response.message) # 5 get the message service returned
-                self.info(f"New weather state is: {weather_state}")
+            weather_state = json.loads(response.message) # 5 get the message service returned
+            self.info(f"New weather state is: {weather_state}")
 
-                #HERE add code for updating farm cells based on weather_state
+            #HERE add code for updating farm cells based on weather_state
 
-            except Exception as e:
-                self.error(f"Failed to get weather state {e}")
-            
-            self.weather_future = None
+        except Exception as e:
+            self.error(f"Failed to get weather state {e}")
+        
+        self.weather_future = None
 
 
     def on_plot_watered(self, plot):

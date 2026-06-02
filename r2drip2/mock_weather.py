@@ -52,7 +52,7 @@ class MockWeather(Base):
             
     def get_weather_callback(self, request, response):
         self.update()
-        response.sucess = True
+        response.success = True
         response.message = json.dumps(self.state)
 
         return response
