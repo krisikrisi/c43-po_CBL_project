@@ -19,14 +19,14 @@
             "cell": 2,
             "action": "watering_completed",
             "water_amount_liters": 2.5,
-            "message":"Watering started for cell 2."
+            "message": "Watering started for cell 2."
         },
         {
             "time": "2026-05-26T07:37:59",
             "cell": 7,
             "action": "watereing_completed",
             "water_amount_liters": 2.5,
-            "message":"Watering started for cell 8."
+            "message": "Watering started for cell 8."
         },
         {
             "time": "2026-05-26T07:42:51",
@@ -34,6 +34,11 @@
             "action": "watering_completed",
             "water_amount_liters": 1.5,
             "message": "Watering has been completed."
+        },
+        {
+            "time": "2026-06-02T10:01:40",
+            "cell": 4,
+            "action": "watered"
         }
     ]
 }

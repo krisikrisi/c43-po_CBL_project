@@ -3,6 +3,7 @@
 from r2drip2.base import Base, Plot, Position, CELL_POS
 
 import math
+import copy
 
 from std_msgs.msg import Int32
 from geometry_msgs.msg import TwistStamped # type of message for /cmd_vel
@@ -44,6 +45,7 @@ class RobotMover(Base):
         self.origin = None
 
         self.odom_received = False
+        self.publish_vel(0.0, 0.0)
 
     def odom_callback(self, msg):  # updating coordinates (from odom). it takes x, y, orientation
         self.current_pos.set_x(msg.pose.pose.position.x)
@@ -87,13 +89,7 @@ class RobotMover(Base):
 
     def set_origin_if_needed(self): # save start position so that cell 4 is like (0, 0).
         if self.origin is None:
-            # it feels like the previous version didnt make a real copy of robots position, it moved incorrectly in gazebo after a couple of commands
-            # self.origin = self.current_pos - it seems like it didnt copy the real values. it made origin point to the same Position object rather than its coords
-            self.origin = Position(
-                self.current_pos.get_x(),
-                self.current_pos.get_y(),
-                self.current_pos.get_yaw()
-            )
+            self.origin = copy.deepcopy(self.current_pos)
 
             self.info(
                 f"Origin saved: x={self.origin.get_x():.2f}, "
@@ -180,13 +176,13 @@ class RobotMover(Base):
             target_angle = delta.angle()
             angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw()) 
 
-            if abs(angle_diff) > 0.10: # If the angle is far from needed, stop going forward and rotate
+            if abs(angle_diff) > 0.08: # If the angle is far from needed, stop going forward and rotate
                 linear_x = 0.0
                 angular_z = 0.30 * angle_diff
                 angular_z = max(min(angular_z, 0.25), -0.25)
             else: # Else move and turn simultaneously
                 linear_x = min(0.08, distance)
-                angular_z = 0.35 * angle_diff
+                angular_z = 0.30 * angle_diff
                 angular_z = max(min(angular_z, 0.15), -0.15)
 
             msg = self.publish_vel(linear_x, angular_z)

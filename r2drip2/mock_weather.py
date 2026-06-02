@@ -61,7 +61,7 @@ class MockWeather(Base):
 def main(args=None):
     weatherNode = MockWeather()
     weatherNode.process()
-    weatherNode.shutdown()
+    weatherNode.destroy()
 
 
 if __name__ == '__main__':

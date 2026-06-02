@@ -8,7 +8,6 @@
             "planted_date": "2026-05-01",
             "estimated_harvest_date": "2026-07-10",
             "status": "needs_monitoring"
-
         },
         "1": {
             "moisture": 50,
@@ -35,7 +34,7 @@
             "status": "needs_monitoring"
         },
         "4": {
-            "moisture": 60,
+            "moisture": 65,
             "plant": "tomato",
             "growth_stage": "growing",
             "planted_date": "2026-05-01",
