@@ -87,7 +87,13 @@ class RobotMover(Base):
 
     def set_origin_if_needed(self): # save start position so that cell 4 is like (0, 0).
         if self.origin is None:
-            self.origin = self.current_pos
+            # it feels like the previous version didnt make a real copy of robots position, it moved incorrectly in gazebo after a couple of commands
+            # self.origin = self.current_pos - it seems like it didnt copy the real values. it made origin point to the same Position object rather than its coords
+            self.origin = Position(
+                self.current_pos.get_x(),
+                self.current_pos.get_y(),
+                self.current_pos.get_yaw()
+            )
 
             self.info(
                 f"Origin saved: x={self.origin.get_x():.2f}, "
@@ -174,14 +180,14 @@ class RobotMover(Base):
             target_angle = delta.angle()
             angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw()) 
 
-            if abs(angle_diff) > 0.05: # If the angle is far from needed, stop going forward and rotate
+            if abs(angle_diff) > 0.10: # If the angle is far from needed, stop going forward and rotate
                 linear_x = 0.0
                 angular_z = 0.30 * angle_diff
                 angular_z = max(min(angular_z, 0.25), -0.25)
             else: # Else move and turn simultaneously
                 linear_x = min(0.08, distance)
-                angular_z = 0.45 * angle_diff
-                angular_z = max(min(angular_z, 0.25), -0.25)
+                angular_z = 0.35 * angle_diff
+                angular_z = max(min(angular_z, 0.15), -0.15)
 
             msg = self.publish_vel(linear_x, angular_z)
 
@@ -191,7 +197,7 @@ class RobotMover(Base):
             )
 
             # Sleep, to prevent spamming the robot with an extreme amount of velocity commands
-            self.sleep(1)
+            self.sleep(0.1)
         self.stop()
 
     def stop(self):
