@@ -1,209 +1,172 @@
 from r2drip2.base import Base
 import rclpy
 import json
-from datetime import datetime
 from std_srvs.srv import Trigger
+from std_msgs.msg import Int32
 
 
-# --- File names (relative to the data/ folder; Base knows where that is) ---
-DIGITAL_FARM_PATH = "digital_farm.json"
+#File names (relative to the data/ folder; Base knows where that is)
 PLANT_DB_PATH = "plant_database.json"
 CONFIG_PATH = "system_config.json"
-SCHEDULE_PATH = "schedule.json"
 
-# --- Tunable defaults ---
-DECISION_INTERVAL_SECONDS = 10.0   # how often a decision cycle runs
-DEFAULT_WATER_LITERS = 2.5         # amount to schedule for an irrigation action
+#Tunable defaults 
+DEFAULT_WATER_LITERS = 2.5         # amount to water per irrigation action
 
 
 class DecisionMaker(Base):
     """
     Rule-based irrigation decision node.
 
-    Every `interval` seconds it runs one decision cycle: read the current
-    field state, plant requirements and weather, decide which cells need
-    watering, and write an irrigation plan to schedule.json.
+    Every time a /water_change is received it runs one decision cycle:
+    check the current farm state and weather, then send a /water_cell
+    command for the cell most in need of watering.
 
-    Reads (data/)
-    -------------
-    digital_farm.json   - current moisture (0-100) and crop per cell
-    plant_database.json - per-crop moisture requirements
-    system_config.json  - thresholds (e.g. rainfall cutoff for skipping)
+    Subscribes
+    /water_change (Int32) - triggers a new decision cycle
 
-    Calls (ROS service)
-    -------------------
-    /get_weather : std_srvs/Trigger
-        Returns the current weather as a JSON string in the response message.
+    Publishes
+    /water_cell (Int32) - cell ID that the robot should water next
 
-    Writes (data/)
-    --------------
-    schedule.json - the irrigation plan for the robot (format in `decide`)
+    Calls (ROS services)
+    /get_state   - current moisture of all cells (from farm_manager)
+    /get_crops   - current crop of all cells (from farm_manager)
+    /get_weather - current / forecast weather
     """
 
-    #Build the node
     def __init__(self):
         super().__init__('decision_maker')
 
-        self.interval = DECISION_INTERVAL_SECONDS
+        # Load static reference data once into member variables
+        self.config = self.read_json(CONFIG_PATH)
+        plants_db = self.read_json(PLANT_DB_PATH)
+        self.plant_info = {
+            p["name"].lower(): p for p in plants_db["plants"]
+        }
+
+        # Service clients
         self.weather_client = self.create_client(Trigger, '/get_weather')
+        self.state_client = self.create_client(Trigger, '/get_state')
+        self.crops_client = self.create_client(Trigger, '/get_crops')
+
+        # Publisher
+        self.water_cell_publisher = self.create_publisher(Int32, '/water_cell', 10)
+
+        # Subscription — set flag so the main loop calls decide()
+        self.should_decide = True  # run once at startup too
+        self.create_subscription(Int32, '/water_change', self._water_change_callback, 10)
+
         self.info("Decision maker node started!")
 
+    # Subscription callback 
 
-    #Calls the weather API and returns it as a python dict
-    def get_weather(self):
-        """
-        Call /get_weather and return the weather as a dict, or None if the
-        weather node is unreachable.
+    def _water_change_callback(self, msg):
+        """Set flag so the main loop runs a decision cycle."""
+        self.should_decide = True
 
-        Returns
-        -------
-        dict or None
-            Keys: temperature, raining, water_mm_per_day.
+    # Service helpers
+
+    def _call_trigger(self, client):
         """
-        if not self.weather_client.wait_for_service(timeout_sec=2.0):
-            self.warning("/get_weather not available")
+        Call a Trigger service synchronously.
+
+        Returns the response message decoded as a dict, or None if the
+        service is unreachable.
+        """
+        if not client.wait_for_service(timeout_sec=2.0):
+            self.warning("A required service is not available, skipping")
             return None
 
-        #Send the request and save the placeholder into future
-        future = self.weather_client.call_async(Trigger.Request())
-        #Waits until the weather node's response arrives into future
+        future = client.call_async(Trigger.Request())
         rclpy.spin_until_future_complete(self, future)
-        #The actual response
         response = future.result()
-        #Returning it back as a python dictionary
         return json.loads(response.message)
 
+    def get_weather(self):
+        """Call /get_weather and return the result as a dict, or None."""
+        return self._call_trigger(self.weather_client)
 
-    #The decision logic
+    def get_state(self):
+        """Call /get_state and return moisture data as a dict, or None."""
+        return self._call_trigger(self.state_client)
+
+    def get_crops(self):
+        """Call /get_crops and return crop data as a dict, or None."""
+        return self._call_trigger(self.crops_client)
+
+    # Decision logic
+
     def decide(self):
         """
-        Run one decision cycle and write the plan to schedule.json.
+        Run one decision cycle.
 
-        schedule.json format
-        ---------------------
-        {
-          "schedule_date": "YYYY-MM-DD",
-          "created_at":    "<ISO timestamp>",
-          "actions": [
-            {
-              "cell_id":             "0".."8",
-              "plant_name":          str,
-              "action_type":         "irrigation" | "skip_irrigation",
-              "water_amount_liters": float,
-              "reason":              str
-            }
-          ]
-        }
+        Finds the cell with the largest moisture deficit below its minimum
+        requirement, and publishes a /water_cell command for it — unless
+        significant rain is expected, in which case watering is skipped.
         """
-        #Get the info from the json files
-        farm = self.read_json(DIGITAL_FARM_PATH)
-        plants = self.read_json(PLANT_DB_PATH)
-        configuration = self.read_json(CONFIG_PATH)
+        if self.significant_rain():
+            self.info("Significant rain expected; skipping watering")
+            return
 
-        #Build a "lookup" table from the plant dictionary (just to search easier)
-        plant_info = {
-            p["name"].lower(): p for p in plants["plants"]
-        }
+        state = self.get_state()
+        crops = self.get_crops()
 
-        #Action queue
-        actions = []
-        #Checking if it rains for the whole farm
-        rains = self.significant_rain(configuration)
+        if state is None or crops is None:
+            self.warning("Could not reach farm_manager services; skipping decision")
+            return
 
-        #Looping over the cells
-        for cell_id, cell in farm["cells"].items():
-            crop = cell["plant"]
-            moisture = cell["moisture"]
-            plant = plant_info.get(crop.lower())
+        # Find the most moisture-needy cell
+        best_cell = None
+        best_deficit = 0
 
-            #If there is no data for the cell, we just skip it
+        for cell_id, cell_state in state["cells"].items():
+            moisture = cell_state["moisture"]
+            crop = crops["cells"][cell_id]["plant"].lower()
+            plant = self.plant_info.get(crop)
+
             if plant is None:
-                self.warning(f"No plant data for crop '{crop}' (cell {cell_id})")
+                self.warning(f"No plant data for '{crop}' (cell {cell_id}), skipping")
+                continue
 
-            #If it rains we also skip it
-            elif rains:
-                actions.append({
-                    "cell_id": cell_id,
-                    "plant_name": crop,
-                    "action_type": "skip_irrigation",
-                    "water_amount_liters": 0,
-                    "reason": "significant amount of rain today"
-                })
-            #Otherwise we water the plant and update the action list
-            elif self.needs_water(plant, moisture):
-                actions.append({
-                    "cell_id": cell_id,
-                    "plant_name": crop,
-                    "action_type": "irrigation",
-                    "water_amount_liters": DEFAULT_WATER_LITERS,
-                    "reason": "Moisture below minimum"
-                })
+            min_moisture = plant["ideal_soil_moisture_percent"]["min"]
+            deficit = min_moisture - moisture  # positive means below minimum
 
-        #This is basically what will eventually get to the robot
-        schedule = {
-            "schedule_date": datetime.now().date().isoformat(),
-            "created_at": datetime.now().isoformat(timespec="seconds"),
-            "actions": actions,
-        }
+            if deficit > best_deficit:
+                best_deficit = deficit
+                best_cell = int(cell_id)
 
-        self.write_json(SCHEDULE_PATH, schedule)
-        self.info(f"schedule at {len(actions)} actions")
+        if best_cell is not None:
+            msg = Int32()
+            msg.data = best_cell
+            self.water_cell_publisher.publish(msg)
+            self.info(f"Sending water_cell for cell {best_cell} (deficit: {best_deficit:.1f}%)")
+        else:
+            self.info("All cells have sufficient moisture, nothing to water")
 
-
-    def needs_water(self, plant, moisture):
-        """
-        Return True if a cell's moisture is below the plant's minimum.
-
-        Parameters
-        ----------
-        plant : dict
-            The plant's record from plant_database.json.
-        moisture : float
-            The cell's current moisture (0-100).
-
-        Returns
-        -------
-        bool
-        """
-        return moisture < plant["ideal_soil_moisture_percent"]["min"]
-
-
-    def significant_rain(self, config):
-        """
-        Return True if enough rain is expected to skip watering.
-
-        Parameters
-        ----------
-        config : dict
-            Contents of system_config.json (for the rainfall threshold).
-
-        Returns
-        -------
-        bool
-            False if the weather node is unreachable (water as normal).
-        """
+    def significant_rain(self):
         weather = self.get_weather()
 
-        #If weather node is not reachable we just water as normal
         if weather is None:
             return False
 
-        #If it rains more than the set threshold, return True so we skip watering
         rain_mm = weather["water_mm_per_day"]
-        threshold = config["skip_watering_if_rain_mm_above"]
+        threshold = self.config["skip_watering_if_rain_mm_above"]
         return rain_mm > threshold
 
+    def needs_water(self, plant, moisture):
+        return moisture < plant["ideal_soil_moisture_percent"]["min"]
 
-#Loops every `interval` seconds, calls decide(), stops on Ctrl+C.
-#We drive the loop ourselves (not spin) because get_weather makes a
-#synchronous service call, which would deadlock inside spin.
+
+# Drive the loop ourselves (not spin) because _call_trigger makes synchronous
+# service calls that would deadlock inside a spin callback.
 def main(args=None):
     node = DecisionMaker()
 
     try:
         while node.ok():
-            node.decide()
-            node.sleep(node.interval)
+            node.process_once()  # process incoming messages (sets should_decide flag)
+            if node.should_decide:
+                node.should_decide = False
+                node.decide()
     except KeyboardInterrupt:
         pass
     node.destroy()

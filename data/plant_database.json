@@ -47,7 +47,7 @@
   	"watering_frequency_days": 1,
   	"days_until_harvest": 90,
   	"notes": "Needs more water during warm weather and during strong growth stages."
-    }
+    },
     {
     "name": "Rice",
     "growing_seasons": ["spring", "summer"],
