@@ -115,7 +115,7 @@ class FarmManager(Base):
 
         self.on_plot_watered(plot)
 
-    def farm_timer_callback(self): # this should be finalized (right now just checking whether the service is working)
+    def farm_timer_callback(self):
         """
         Called every 40 seconds.
         Sends request to the weather service
