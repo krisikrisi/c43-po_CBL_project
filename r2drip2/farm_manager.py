@@ -12,6 +12,7 @@ from std_srvs.srv import Trigger
 # Constants:
 DIGITAL_FARM_PATH = "digital_farm.json"
 OPERATION_LOG_PATH = "operation_log.json"
+REFRESH_SECONDS = 10
 
 class FarmManager(Base):
     """
@@ -50,10 +51,8 @@ class FarmManager(Base):
         self.weather_future = None
 
         self.timer = self.create_timer(
-            timer_period_sec=40,
+            timer_period_sec=REFRESH_SECONDS,
             callback=self.farm_timer_callback)
-        # end weather_service_client
-
         
         self.info("Farm manager node started")
 
@@ -146,12 +145,10 @@ class FarmManager(Base):
             weather_state = json.loads(response.message) # 5 get the message service returned
             self.info(f"New weather state is: {weather_state}")
 
-            #HERE add code for updating farm cells based on weather_state
-
         except Exception as e:
             self.error(f"Failed to get weather state {e}")
         
-        self.weather_future = None
+        self.weather_future = None # stores the current pending weather request, so we dont send another one before it finishes
 
 
     def on_plot_watered(self, plot):
