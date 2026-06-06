@@ -12,6 +12,7 @@ class RobotMover(Base):
     """
     **Subscriptions**
     - /odom
+    - /water_cell
 
     **Publishers**
     - /watering_done
@@ -27,6 +28,8 @@ class RobotMover(Base):
         The publisher to /watering_done
     odom_subscription : Subscription
         The subscription listening for /odom
+    water_cell_subscription : Subscription
+        The subscription listening for /water_cell
     current_pos : Position
         The current position of the robot
     origin : Position
@@ -39,11 +42,13 @@ class RobotMover(Base):
         self.vel_publisher = self.create_publisher(TwistStamped, '/cmd_vel', 10) # publisher to send movement commands
         self.done_publisher = self.create_publisher(Int32, '/watering_done', 10)
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)  # listen to /odom - position of robot. ros will call odom_callback when new messages come
+        self.water_cell_subscription = self.create_subscription(Int32, '/water_cell', self.water_cell_callback, 10)  # listen to /water_cell - cell the decision system wants watered
 
         self.current_pos = Position(0,0,0)
         self.origin = None
 
         self.odom_received = False
+        self.next_cell = None  # set by water_cell_callback, handled in main loop
 
     def odom_callback(self, msg):  # updating coordinates (from odom). it takes x, y, orientation
         self.current_pos.set_x(msg.pose.pose.position.x)
@@ -56,6 +61,9 @@ class RobotMover(Base):
 
         self.current_pos.set_yaw(yaw)
         self.odom_received = True
+
+    def water_cell_callback(self, msg):  # decision system tells us which cell to water next
+        self.next_cell = msg.data
 
     def publish_vel(self, linear=0.0, angular=0.0):
         """
@@ -102,7 +110,7 @@ class RobotMover(Base):
         ----------
         plot : Plot
             The plot we want the bots coordinates from
-        
+
         Returns
         -------
         Vec2
@@ -120,7 +128,7 @@ class RobotMover(Base):
         ----------
         angle : float
             The angle to transform
-        
+
         Returns
         -------
         float
@@ -132,7 +140,7 @@ class RobotMover(Base):
     def publish_watering_done(self, plot):
         """
         Publishes to the /watering_done message
-        
+
         Parameters
         ----------
         plot : Plot
@@ -151,7 +159,7 @@ class RobotMover(Base):
             return
 
         self.wait_for_odom()        # get odom coords
-        self.set_origin_if_needed()          
+        self.set_origin_if_needed()
 
         target = self.get_target_position(plot)  # coords of cell
 
@@ -172,7 +180,7 @@ class RobotMover(Base):
                 return
 
             target_angle = delta.angle()
-            angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw()) 
+            angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw())
 
             if abs(angle_diff) > 0.05: # If the angle is far from needed, stop going forward and rotate
                 linear_x = 0.0
@@ -200,48 +208,22 @@ class RobotMover(Base):
         super().destroy()
 
 
-def print_menu():
-    print("\n" + "=" * 50)
-    print("Choose the cell to move to (0-8)")
-    print("=" * 50)
-    print("0    1    2")
-    print("3    4    5")
-    print("6    7    8")
-    print("=" * 50)
-    print("Cell 4 = robot start (center) position")
-    print("Distance between cells = 0.5 m")
-    print("Enter -1 to exit")
-    print("=" * 50)
-
-
 def main(args=None):
     node = RobotMover() # creating node
 
     node.wait_for_odom() # waiting for position and saving start position
     node.set_origin_if_needed()
 
-    print_menu()
+    try:
+        while node.ok(): # while ros is working
+            node.process_once(0.1) # wait for a /water_cell command
 
-    while node.ok(): # while ros is working
-        try:
-            user_input = input("\nEnter cell number: ")
-            cell = int(user_input)
-
-            if cell == -1:
-                print("Exiting...")
-                break
-
-            if 0 <= cell <= 8:
-                node.go_to_cell(cell)
-            else:
-                print("Invalid. Use 0-8 or -1.")
-
-        except ValueError:
-            print("Enter a number.")
-
-        except KeyboardInterrupt:
-            print("\nExiting...")
-            break
+            if node.next_cell is not None:
+                cell = node.next_cell
+                node.next_cell = None
+                node.go_to_cell(cell)  # go_to_cell validates the cell number itself
+    except KeyboardInterrupt:
+        print("\nExiting...")
 
     node.stop()
 
