@@ -3,16 +3,18 @@
 from r2drip2.base import Base, Plot
 
 import json
-from pathlib import Path
 from datetime import datetime
 
 from std_msgs.msg import Int32
-from std_srvs.srv import Trigger 
+from std_srvs.srv import Trigger
 
 # Constants:
 DIGITAL_FARM_PATH = "digital_farm.json"
 OPERATION_LOG_PATH = "operation_log.json"
-REFRESH_SECONDS = 10
+
+WEATHER_REFRESH_SECONDS = 10
+FARM_UPDATE_SECONDS = 5
+
 
 class FarmManager(Base):
     """
@@ -32,7 +34,6 @@ class FarmManager(Base):
     def __init__(self):
         super().__init__('farm_manager')
 
-        # Subscribe to /watering_done (from robot_mover.py)
         self.watering_done_subscription = self.create_subscription(
             Int32,
             '/watering_done',
@@ -42,40 +43,52 @@ class FarmManager(Base):
 
         self.load_files()
 
-        # start weather_service_client
+        self.weather_state = {
+            "temperature": 20.0,
+            "humidity": 60.0,
+            "raining": False,
+            "water_mm_per_day": 0.0
+        }
+
         self.service_client = self.create_client(Trigger, srv_name='/get_weather')
-        
+
         while not self.service_client.wait_for_service(timeout_sec=1.0):
             self.info("Service /get_weather not available, waiting...")
 
         self.weather_future = None
 
-        self.timer = self.create_timer(
-            timer_period_sec=REFRESH_SECONDS,
-            callback=self.farm_timer_callback)
-        
+        self.weather_timer = self.create_timer(
+            timer_period_sec=WEATHER_REFRESH_SECONDS,
+            callback=self.weather_timer_callback
+        )
+
+        self.farm_timer = self.create_timer(
+            timer_period_sec=FARM_UPDATE_SECONDS,
+            callback=self.farm_timer_callback
+        )
+
         self.info("Farm manager node started")
 
     def load_files(self):
         """
-        Loads the state (from the previous time the program ran) from the disk
-        If it cannot find the files, it loads appropriate replacement data
+        Loads the state from disk.
+        If files are missing, creates default in-memory data.
         """
         if not self.data_file_exists(DIGITAL_FARM_PATH):
             self.error("Could not find the digital farm file ('/data/" + DIGITAL_FARM_PATH + "')")
             self.farm_state = {
-               "last_updated": datetime.now().isoformat(timespec="seconds"),
-               "cells": {
-                       str(i): {
-                         "moisture": 50,
-                         "plant": "wheat",
-                         "growth_stage": "growing",
-                         "planted_date": "2026-05-01",
-                         "estimated_harvest_date": "2026-09-01",
-                         "status": "needs_monitoring"   
-                       }
-                       for i in range(9)
-               }
+                "last_updated": datetime.now().isoformat(timespec="seconds"),
+                "cells": {
+                    str(i): {
+                        "moisture": 50,
+                        "plant": "wheat",
+                        "growth_stage": "growing",
+                        "planted_date": "2026-05-01",
+                        "estimated_harvest_date": "2026-09-01",
+                        "status": "needs_monitoring"
+                    }
+                    for i in range(9)
+                }
             }
         else:
             self.farm_state = self.read_json(DIGITAL_FARM_PATH)
@@ -90,7 +103,7 @@ class FarmManager(Base):
 
     def shutdown(self):
         """
-        Makes sure the state of the program is written to the disk
+        Makes sure the state of the program is written to disk.
         """
         self.write_json(DIGITAL_FARM_PATH, self.farm_state)
         self.write_json(OPERATION_LOG_PATH, self.operation_logs)
@@ -98,14 +111,93 @@ class FarmManager(Base):
         self.watering_done_subscription.destroy()
         super().destroy()
 
+    def weather_timer_callback(self):
+        """
+        Called every WEATHER_REFRESH_SECONDS
+        Sends request to the weather service
+        """
+
+        if self.weather_future is not None and not self.weather_future.done():
+            self.info("Weather request is pending")
+            return
+
+        request = Trigger.Request()
+        self.weather_future = self.service_client.call_async(request)
+        self.weather_future.add_done_callback(self.weather_response_callback)
+
+    def weather_response_callback(self, future):
+        """
+        Called when weather service responds
+        Updates self.weather_state
+        """
+
+        try:
+            response = future.result()
+
+            if not response.success:
+                self.error("Weather service returned failure")
+                self.weather_future = None
+                return
+
+            self.weather_state = json.loads(response.message)
+
+            self.info(f"Updated weather state: {self.weather_state}")
+
+        except Exception as e:
+            self.error(f"Failed to get weather state: {e}")
+
+        self.weather_future = None
+
+    def farm_timer_callback(self):
+        """
+        Called every FARM_UPDATE_SECONDS
+        Updates farm moisture using the latest weather state
+        """
+
+        moisture_change = self.calculate_weather_moisture_change()
+
+        for cell_key in self.farm_state["cells"]:
+            self.change_cell_moisture(cell_key, moisture_change)
+
+        self.farm_state["last_updated"] = datetime.now().isoformat(timespec="seconds")
+        self.write_json(DIGITAL_FARM_PATH, self.farm_state)
+
+        self.info(f"Farm moisture changed by {moisture_change:.2f} because of the weather")
+
+    def calculate_weather_moisture_change(self):
+        """
+        Calculates how much moisture should change
+
+        Positive value - soil gets wetter
+        Negative value - soil dries
+        """
+
+        temperature = self.weather_state["temperature"]
+        humidity = self.weather_state["humidity"]
+        raining = self.weather_state["raining"]
+        water_mm_per_day = self.weather_state["water_mm_per_day"]
+
+        # since it's being changed every 5 seconds i made all coeffs small
+        if raining:
+            return 0.20 + water_mm_per_day * 0.05
+
+        drying = -0.10
+
+        if temperature > 30:
+            drying -= 0.10
+        elif temperature > 25:
+            drying -= 0.05
+
+        if humidity < 30:
+            drying -= 0.10
+        elif humidity < 50:
+            drying -= 0.05
+
+        return drying
+
     def watering_done_callback(self, msg):
         """
-        Called when ROS receive a message from  /watering_done
-
-        Parameters
-        ----------
-        msg : WateringDone
-            The plot where watering was done
+        Called when ROS receives a message from /watering_done.
         """
         plot = Plot(msg.data)
 
@@ -113,65 +205,52 @@ class FarmManager(Base):
             self.error(f"Invalid cell number: {plot.get_key()}")
             return
 
-        self.on_plot_watered(plot)
+        self.on_plot_watered(plot, 5)
 
-    def farm_timer_callback(self):
+    def on_plot_watered(self, plot, watering_amount):
         """
-        Called every 40 seconds.
-        Sends request to the weather service
-        """
-        
-        if self.weather_future is not None and not self.weather_future.done():
-            self.info("Weather request is pending")
-            return
-        
-        request = Trigger.Request() # 1 create request
-        self.weather_future = self.service_client.call_async(request) # 2 send it with call_async
-        self.weather_future.add_done_callback(self.weather_response_callback) # 3 wait until response comes
-
-    def weather_response_callback(self, future):
-        """
-        Called when weather service responds
+        Updates the farm state when a plot is watered.
+        watering_amount is the amount of water added by robot. 
+        It is initially chosen by decision making system
         """
 
-        try:
-            response = future.result() #4 take response.messaege
+        old_moisture, new_moisture = self.change_cell_moisture(
+            plot.get_key(),
+            watering_amount
+        )
 
-            if not response.success:
-                self.error("Wether service returned failure")
-                self.weather_future = None
-                return
+        self.farm_state["last_updated"] = datetime.now().isoformat(timespec="seconds")
 
-            weather_state = json.loads(response.message) # 5 get the message service returned
-            self.info(f"New weather state is: {weather_state}")
-
-        except Exception as e:
-            self.error(f"Failed to get weather state {e}")
-        
-        self.weather_future = None # stores the current pending weather request, so we dont send another one before it finishes
-
-
-    def on_plot_watered(self, plot):
-        """
-        Updates the farm state when a plot is watered
-
-        Parameters
-        ----------
-        plot : Plot
-            The plot that was watered
-        """
-        old_moisture = self.farm_state["cells"][str(plot.get_key())]["moisture"]
-        new_moisture = old_moisture + 5
-        self.farm_state["cells"][str(plot.get_key())]["moisture"] += 5
         log_entry = {
             "time": datetime.now().isoformat(timespec='seconds'),
             "cell": plot.get_key(),
             "action": "watering_completed",
-            "water_amount_litered": 5,
-            "message": "Some kind of message"
+            "water_amount_liters": watering_amount,
+            "message": "Robot completed watering"
         }
+
         self.operation_logs["logs"].append(log_entry)
+
+        self.write_json(DIGITAL_FARM_PATH, self.farm_state)
+        self.write_json(OPERATION_LOG_PATH, self.operation_logs)
+
         self.info(f"Cell {plot.get_key()} moisture: {old_moisture}% -> {new_moisture}%")
+
+    def change_cell_moisture(self, cell_key, amount):
+        """
+        Changes moisture of one cell
+        amount can be positive or negative
+        """
+
+        old_moisture = self.farm_state["cells"][str(cell_key)]["moisture"]
+        new_moisture = old_moisture + amount
+
+        new_moisture = max(0, min(100, new_moisture))
+        new_moisture = round(new_moisture, 2)
+
+        self.farm_state["cells"][str(cell_key)]["moisture"] = new_moisture
+
+        return old_moisture, new_moisture
 
 
 def main(args=None):
