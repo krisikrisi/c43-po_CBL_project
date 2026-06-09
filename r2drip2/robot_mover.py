@@ -12,7 +12,6 @@ class RobotMover(Base):
     """
     **Subscriptions**
     - /odom
-    - /water_cell
 
     **Publishers**
     - /watering_done
@@ -28,8 +27,6 @@ class RobotMover(Base):
         The publisher to /watering_done
     odom_subscription : Subscription
         The subscription listening for /odom
-    water_cell_subscription : Subscription
-        The subscription listening for /water_cell
     current_pos : Position
         The current position of the robot
     origin : Position
@@ -110,7 +107,7 @@ class RobotMover(Base):
         ----------
         plot : Plot
             The plot we want the bots coordinates from
-
+        
         Returns
         -------
         Vec2
@@ -128,7 +125,7 @@ class RobotMover(Base):
         ----------
         angle : float
             The angle to transform
-
+        
         Returns
         -------
         float
@@ -140,7 +137,7 @@ class RobotMover(Base):
     def publish_watering_done(self, plot):
         """
         Publishes to the /watering_done message
-
+        
         Parameters
         ----------
         plot : Plot
@@ -159,7 +156,7 @@ class RobotMover(Base):
             return
 
         self.wait_for_odom()        # get odom coords
-        self.set_origin_if_needed()
+        self.set_origin_if_needed()          
 
         target = self.get_target_position(plot)  # coords of cell
 
@@ -180,7 +177,7 @@ class RobotMover(Base):
                 return
 
             target_angle = delta.angle()
-            angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw())
+            angle_diff = self.normalize_angle(target_angle - self.current_pos.get_yaw()) 
 
             if abs(angle_diff) > 0.05: # If the angle is far from needed, stop going forward and rotate
                 linear_x = 0.0
@@ -216,7 +213,7 @@ def main(args=None):
 
     try:
         while node.ok(): # while ros is working
-            node.process_once(0.1) # wait for a /water_cell command
+            node.process_once() # returns as soon as a /water_cell message arrives
 
             if node.next_cell is not None:
                 cell = node.next_cell
