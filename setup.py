@@ -28,6 +28,7 @@ setup(
             'farm_manager = r2drip2.farm_manager:main',
             'test = r2drip2.base:main',
             'decision_system = r2drip2.decision_system:main',
+            'weather_service = r2drip2.mock_weather:main'
         ],
     },
 )
