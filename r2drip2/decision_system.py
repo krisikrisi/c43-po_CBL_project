@@ -1,11 +1,6 @@
 """
-Rule-based irrigation decision node.
-
-Each decision cycle asks the weather, state and crop services and picks the
-cell furthest below its minimum moisture, then keeps watering that cell until
-it reaches its minimum before moving on to the next-worst one. This stops the
-robot from bouncing between cells with similar deficits. Cycles run on a timer
-and on every /water_change, and every service call is asynchronous.
+Rule-based irrigation decision node: waters the cell furthest below its minimum
+moisture (sticking with it until satisfied), driven by a timer and /water_change.
 """
 
 from r2drip2.base import Base
@@ -19,11 +14,8 @@ import json  # service replies carry their data as a JSON string
 PLANT_DB_PATH = "plant_database.json"
 CONFIG_PATH = "system_config.json"
 
-# How often (seconds) the node re-checks the farm on its own. /water_change drives
-# the normal loop, so this is really just the startup kick + a periodic safety
-# re-check. Trade-off worth knowing: while there's nothing to water it still
-# re-polls the services every tick — harmless but a touch wasteful, so feel free
-# to bump this up (or gate it) if that ever matters.
+# Timer interval (seconds) for re-checking the farm; /water_change drives the
+# normal loop. Bigger = less idle polling when there's nothing to water.
 DECISION_PERIOD_SEC = 5
 
 
@@ -57,8 +49,7 @@ class DecisionMaker(Base):
     timer : Timer
         Fires periodically to start a decision cycle.
     busy : bool
-        True while a decision cycle is running or we're waiting for the robot
-        to finish the watering we last commanded.
+        True while a cycle is running or a watering is in progress.
     target_cell : int or None
         The cell currently being watered, kept until it reaches its minimum.
     state : dict or None
@@ -85,21 +76,14 @@ class DecisionMaker(Base):
         # Publisher
         self.water_cell_publisher = self.create_publisher(Int32, '/water_cell', 10)
 
-        # Decision state. `busy` is the one worth understanding: it's True from
-        # the moment we start a cycle until the robot reports the watering done
-        # (via /water_change). It pulls double duty — it keeps two cycles from
-        # overlapping, AND (the subtle bit) it stops the timer from firing a
-        # second /water_cell while the robot is still driving to the first one,
-        # which would otherwise make it water the same cell twice. /water_change
-        # is what clears it: that message is our cue the robot is free again.
+        # busy: True from cycle start until /water_change confirms the watering.
+        # Blocks overlapping cycles and double-commanding a cell mid-drive.
         self.busy = False
         self.target_cell = None  # cell we're finishing before moving on
         self.state = None        # moisture snapshot for the current cycle
         self.crops = None        # crop snapshot for the current cycle
 
-        # Kick off a decision on every /water_change (the robot just finished a
-        # watering) and on the timer above. The timer mainly handles the very
-        # first decision at startup; after that /water_change carries the loop.
+        # Decide on every /water_change, plus a timer (mainly the first decision).
         self.timer = self.create_timer(DECISION_PERIOD_SEC, self.start_decision)
         self.create_subscription(String, '/water_change', self.water_change_callback, 10)
 
@@ -107,10 +91,8 @@ class DecisionMaker(Base):
 
     def water_change_callback(self, msg):
         """
-        Called when the farm manager reports a moisture change.
-
-        A moisture change means the robot finished the watering we asked for,
-        so we're free to decide again.
+        Called when the farm manager reports a moisture change (the robot just
+        finished a watering), so we can decide again.
 
         Parameters
         ----------
@@ -124,12 +106,7 @@ class DecisionMaker(Base):
 
     def start_decision(self):
         """
-        Begins one decision cycle.
-
-        Kicks off the chain of asynchronous service calls (weather, then state,
-        then crops). Does nothing if a cycle is already running or we're still
-        waiting for the robot to finish the last watering (see the `busy` note
-        in __init__).
+        Begins one decision cycle (weather → state → crops). No-op while busy.
         """
         if self.busy:
             return
@@ -152,14 +129,7 @@ class DecisionMaker(Base):
     def request_weather(self):
         """
         Asks /get_weather, or skips straight to state if no weather node is up.
-
-        Weather is optional on purpose — if the service isn't running we just
-        water as normal and nothing breaks. One thing worth flagging for review:
-        the weather branch's farm_manager also talks to /get_weather (to nudge
-        moisture up for rain), so once that's merged this call here may be
-        redundant. Keeping it for now so the rain-skip works without depending
-        on that branch landing first — easy to drop later if we'd rather let
-        farm_manager own weather entirely.
+        Weather is optional: if it's down we just water as normal.
         """
         if self.weather_client.service_is_ready():
             self.call(self.weather_client, self.on_weather)
@@ -168,10 +138,8 @@ class DecisionMaker(Base):
 
     def on_weather(self, future):
         """
-        Handles the /get_weather reply.
-
-        Skips the cycle if significant rain is expected, otherwise continues
-        on to fetch the farm state.
+        Handles the /get_weather reply: skip the cycle if significant rain,
+        otherwise fetch the farm state.
 
         Parameters
         ----------
@@ -258,12 +226,8 @@ class DecisionMaker(Base):
 
     def choose_cell(self):
         """
-        Picks the cell to water and sends a /water_cell command for it.
-
-        Keeps watering the current target cell until it reaches its minimum
-        moisture, then commits to the cell furthest below its minimum. Leaves
-        busy set while a watering is outstanding; clears it when there's
-        nothing left to water.
+        Picks the cell to water and publishes /water_cell: stick with the current
+        target until it's satisfied, then move to the cell furthest below minimum.
         """
         # Finish the cell we already started on before moving to another one.
         if self.target_cell is not None and self.does_current_cell_need_water():
@@ -298,8 +262,7 @@ class DecisionMaker(Base):
             self.publish_water_cell(most_deficient_cell)
             self.info(f"Sending water_cell for cell {most_deficient_cell} (deficit: {greatest_deficit:.1f}%)")
         else:
-            # Nothing to water — free up busy so the timer can re-check later.
-            # (Only log once, on the transition, so an idle farm doesn't spam.)
+            # Nothing to water: clear busy; log only on the transition (no idle spam).
             self.busy = False
             if had_target:
                 self.info("All cells have sufficient moisture, nothing to water")
@@ -307,8 +270,6 @@ class DecisionMaker(Base):
     def does_current_cell_need_water(self):
         """
         Returns True if target_cell is still below its plant's minimum moisture.
-
-        Uses the moisture and crop snapshots from the current cycle.
 
         Returns
         -------
@@ -341,10 +302,6 @@ class DecisionMaker(Base):
     def significant_rain(self, weather):
         """
         Returns True if it's raining enough to skip watering today.
-
-        Only called from one place (on_weather) — kept as its own little method
-        just so the rain check reads clearly there. Happy to inline it if you'd
-        rather; it's here for readability, not reuse.
 
         Parameters
         ----------
