@@ -13,7 +13,7 @@ except ImportError:
     TURTLEBOT_SOUND = False
 
 
-BATTERY_ALERT_PERCENT = 0.2
+BATTERY_ALERT_PERCENT = 0
 
 
 from std_msgs.msg import Int32
@@ -185,12 +185,13 @@ class RobotMover(Base):
         """
         if self.battery_percentage <= BATTERY_ALERT_PERCENT:
             self.play_sound(3)
+            self.sleep(5)
         self.play_sound(1)
         msg = Int32()
         msg.data = plot.get_key()
         self.done_publisher.publish(msg)
         self.info(f"Published watering done for cell {plot.get_key()}")
-        self.sleep(2)
+        self.sleep(5)
 
 
     def go_to_cell(self, cell_number): # main function
