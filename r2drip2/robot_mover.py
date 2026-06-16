@@ -5,6 +5,17 @@ from r2drip2.base import Base, Plot, Position, CELL_POS
 import math
 import copy
 
+from sensor_msgs.msg import BatteryState
+try:
+    from turtlebot3_msgs.srv import Sound
+    TURTLEBOT_SOUND = True
+except ImportError:
+    TURTLEBOT_SOUND = False
+
+
+BATTERY_ALERT_PERCENT = 0.2
+
+
 from std_msgs.msg import Int32
 from geometry_msgs.msg import TwistStamped # type of message for /cmd_vel
 from nav_msgs.msg import Odometry # type of message for /odom
@@ -41,13 +52,18 @@ class RobotMover(Base):
         self.done_publisher = self.create_publisher(Int32, '/watering_done', 10)
         self.odom_subscription = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)  # listen to /odom - position of robot. ros will call odom_callback when new messages come
         self.water_cell_subscription = self.create_subscription(Int32, '/water_cell', self.water_cell_callback, 10)  # listen to /water_cell - cell the decision system wants watered
-
+        self.battery_subscription = self.create_subscription(BatteryState, '/battery_state', self.battery_callback, 10)
         self.current_pos = Position(0,0,0)
         self.origin = None
+
+        if TURTLEBOT_SOUND:
+            self.info("Sound is enabled!")
+            self.sound_client = self.create_client(Sound, '/sound')
 
         self.odom_received = False
         self.next_cell = None  # set by water_cell_callback, handled in main loop
         self.publish_vel(0.0, 0.0)
+        self.battery_percentage = 1
 
     def odom_callback(self, msg):  # updating coordinates (from odom). it takes x, y, orientation
         self.current_pos.set_x(msg.pose.pose.position.x)
@@ -63,6 +79,9 @@ class RobotMover(Base):
 
     def water_cell_callback(self, msg):  # decision system tells us which cell to water next
         self.next_cell = msg.data
+    
+    def battery_callback(self, msg):
+        self.battery_percentage = msg.percentage
 
     def publish_vel(self, linear=0.0, angular=0.0):
         """
@@ -81,6 +100,24 @@ class RobotMover(Base):
         msg.twist.linear.x = linear
         msg.twist.angular.z = angular
         self.vel_publisher.publish(msg)
+
+    def play_sound(self, sound_id, done_callback=None):
+        """
+        Sends a sound request to the /sound service
+        OFF           = 0
+        ON            = 1
+        LOW_BATTERY   = 2
+        ERROR         = 3
+        BUTTON1       = 4
+        BUTTON2       = 5
+        """
+        if not TURTLEBOT_SOUND:
+            return
+        request = Sound.Request()
+        request.value = sound_id
+        call = self.sound_client.call_async(request)
+        if done_callback != None:
+            call.add_done_callback(done_callback)
 
     def wait_for_odom(self):
         """
@@ -137,6 +174,7 @@ class RobotMover(Base):
 
 
     def publish_watering_done(self, plot):
+        
         """
         Publishes to the /watering_done message
         
@@ -145,10 +183,14 @@ class RobotMover(Base):
         plot : Plot
             The plot that was watered
         """
+        if self.battery_percentage <= BATTERY_ALERT_PERCENT:
+            self.play_sound(3)
+        self.play_sound(1)
         msg = Int32()
         msg.data = plot.get_key()
         self.done_publisher.publish(msg)
         self.info(f"Published watering done for cell {plot.get_key()}")
+        self.sleep(2)
 
 
     def go_to_cell(self, cell_number): # main function
