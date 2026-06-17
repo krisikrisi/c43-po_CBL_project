@@ -23,8 +23,8 @@ ros2 run r2drip2 move_to_cell
 (You will need to compile beforehand with ```colcon build --symlink-install; source install/setup.bash;``` if you decide to not use start.sh)
 
 ## Lab login:
-Username: 
-Password: 
+Username: team43
+Password: jubilant-bagpipe-lightbulb-karate
 
 ## How to add features
 1. DONT PUSH TO MAIN!!!
