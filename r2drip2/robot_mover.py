@@ -112,6 +112,7 @@ class RobotMover(Base):
         BUTTON2       = 5
         """
         if not TURTLEBOT_SOUND:
+            self.print(f"Sound not enabled, just tried to play the with the following id: '{sound_id}'")
             return
         request = Sound.Request()
         request.value = sound_id
@@ -183,6 +184,7 @@ class RobotMover(Base):
         plot : Plot
             The plot that was watered
         """
+        self.info(f"Battery percentage: {self.battery_percentage}")
         if self.battery_percentage <= BATTERY_ALERT_PERCENT:
             self.play_sound(3)
             self.sleep(5)
