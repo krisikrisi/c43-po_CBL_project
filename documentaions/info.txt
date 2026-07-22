@@ -1,2 +1,6 @@
-Project Documentation, Proof of Concept and presentation
+In here we have the final report which documents a digitally twinned autonomous TurtleBot system by detailing its full development lifecycle, performance evaluation, and team reflection.
+It consists of credentials and lab access details, an Introduction that establishes the overarching Technical Solution—using revised concept maps, Context/Level 1 DFD diagrams and SDG alignments to address key stakeholder challenges—and outlines the initial Proof of Concept (PoC) scope and feasibility goals. 
+The Implementation & Demonstration section presents the functional and non-functional requirements delivered, the verified digital twin characteristics and the actual executed timeline and resource usage.
+In the Post-Project Evaluation section, the team analyzes differences between initial plans and actual outcomes across core technical criteria—specifically Bidirectional Communication, State Synchronization and Environmental & Object Interaction—while reviewing resource shifts, timeline variances and risk management performance. 
+Finally, a 1.5-page Detailed Reflection evaluates team dynamics and project activities against the Phase 1 and Phase 5 Team Dashboards to extract future lessons, with comprehensive risk assessment tables, team dashboards and large diagrams attached in the Appendices.
   
